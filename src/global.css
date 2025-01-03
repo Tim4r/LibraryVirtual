@@ -1,0 +1,19 @@
+.ant-image {
+  display: flex;
+  justify-content: center;
+}
+.ant-card-body {
+  padding: 0px 24px 24px 24px !important;
+}
+.ant-layout {
+  height: 100vh;
+  overflow-y: hidden;
+  overflow-x: hidden;
+}
+
+.layout {
+  width: 260px;
+  height: 300px;
+  margin: 10px;
+  display: inline-flex;
+}
