@@ -67,7 +67,7 @@ export function BookList() {
           const dd = d.toString();
           dispatch(setExpDate(dd));
         });
-
+        console.log("hi")
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
