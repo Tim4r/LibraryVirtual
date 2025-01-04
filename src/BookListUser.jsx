@@ -40,13 +40,20 @@ export function BookListUser() {
   const [searchQuery, setSearchQuery] = useState("");
   const [authorId, setAuthorId] = useState(null);
   const [categoryId, setCategoryId] = useState(null);
-
-  date.setMinutes(date.getMinutes() + 1);
-  dispatch(setExpDate(date.toString()));
-
+  var Expdate;
   async function getPageOfResults(page) {
     var c = "";
-    if (Date.now() >= date) {
+    if(store.getState().userToken.expDate.length < 1)
+      {
+      Expdate = new Date(window.localStorage.getItem('date'));
+      dispatch(setRefreshToken(window.localStorage.getItem('ref')));
+      dispatch(setAccessToken(window.localStorage.getItem('acc')));
+      }
+      else{
+        Expdate = new Date(store.getState().userToken.expDate);
+      }
+
+    if (moment(Expdate).isBefore(Date.now())) {
       await axios
         .post("https://localhost:7190/api/Account/RefreshToken", {
           token: `${refreshToken}`,
@@ -54,8 +61,13 @@ export function BookListUser() {
         .then((result) => {
           dispatch(setAccessToken(result.data.accessToken));
           dispatch(setRefreshToken(result.data.refreshToken));
-          date.setMinutes(date.getMinutes() + 1);
-          dispatch(setExpDate(date));
+          const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
+    window.localStorage.setItem('date', store.getState().userToken.expDate);
+    window.localStorage.setItem('ref', store.getState().userToken.refreshToken);
+    window.localStorage.setItem('acc', store.getState().userToken.accessToken);
         });
       c = await axios.get(
         `https://localhost:7190/api/GetBookLoansByUserId?userId=${id}`,
@@ -75,7 +87,9 @@ export function BookListUser() {
         }
       );
     }
-
+    window.localStorage.setItem('date', store.getState().userToken.expDate);
+    window.localStorage.setItem('ref',store.getState().userToken.refreshToken);
+    window.localStorage.setItem('acc', store.getState().userToken.accessToken);
     return c.data;
   }
 
@@ -94,43 +108,28 @@ export function BookListUser() {
   }
 
   useEffect(() => {
-    getAllResults();
+    if (moment(Expdate).isBefore(Date.now())) {
+      axios
+        .post("https://localhost:7190/api/Account/RefreshToken", {
+          token: `${store.getState().userToken.refreshToken}`,
+        })
+        .then((result) => {
+          dispatch(setAccessToken(result.data.accessToken));
+          dispatch(setRefreshToken(result.data.refreshToken));
+          const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
+    window.localStorage.setItem('date', store.getState().userToken.expDate);
+    window.localStorage.setItem('ref',store.getState().userToken.refreshToken);
+    window.localStorage.setItem('acc', store.getState().userToken.accessToken);
+        });
+      getAllResults("", "", "");
+    } else {
+      getAllResults("", "", "");
+    }
   }, []);
 
-  async function onClick(e) {
-    if (e.keyPath[1] === "sub2") {
-      getAllResults("", parseInt(e.key) + 1, "");
-    } else {
-      getAllResults(parseInt(e.key) + 1, "", "");
-    }
-    await setCategoryId(parseInt(e.key) + 1);
-    await setAuthorId(parseInt(e.key) + 1);
-  }
-
-  async function deselectItem() {
-    await setCategoryId("");
-    await setAuthorId("");
-    getAllResults("", "", "");
-  }
-
-  const items = [
-    {
-      key: "sub1",
-      label: "Authors",
-      icon: <ContactsOutlined />,
-      children: [
-        {
-          key: "g1",
-          type: "group",
-        },
-      ],
-    },
-    {
-      key: "sub2",
-      label: "Janres",
-      icon: <AppstoreOutlined />,
-    },
-  ];
   const onSearch = (value) => {
     setSearchQuery(value);
     getAllResults(authorId, categoryId, value);

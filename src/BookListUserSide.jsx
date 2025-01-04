@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import { BookDataUserSide } from "./BookDataUserSide";
+import { addFilteredData,removeFilteredData } from "./dataSlice";
 import { setAccessToken, setExpDate, setRefreshToken } from "./tokenSlice";
 import {
   MenuFoldOutlined,
@@ -42,25 +43,43 @@ export function BookListUserSide() {
   var menuAuthors = [];
 
   const date = new Date(store.getState().userToken.expDate);
-  date.setMinutes(date.getMinutes() + 1);
+  var Expdate;
 
   async function getPageOfResults(page, authorId, genreId, searchQuery) {
     var c = "";
-    if (Date.now() >= date) {
+    if(store.getState().userToken.expDate.length < 1)
+      {
+      Expdate = new Date(window.localStorage.getItem('date'));
+      dispatch(setRefreshToken(window.localStorage.getItem('ref')));
+      dispatch(setAccessToken(window.localStorage.getItem('acc')));
+      }
+      else{
+        Expdate = new Date(store.getState().userToken.expDate);
+      }
+
+    if (moment(Expdate).isBefore(Date.now())) {
+      console.log("if expdate is before");
+      console.log(store.getState().userToken.refreshToken);
       await axios
         .post("https://localhost:7190/api/Account/RefreshToken", {
-          token: `${refreshToken}`,
+          token: `${store.getState().userToken.refreshToken}`,
         })
         .then((result) => {
           dispatch(setAccessToken(result.data.accessToken));
           dispatch(setRefreshToken(result.data.refreshToken));
-          date.setMinutes(date.getMinutes() + 1);
-          dispatch(setExpDate(date));
+          const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
+    window.localStorage.setItem('date', store.getState().userToken.expDate);
+    window.localStorage.setItem('ref', store.getState().userToken.refreshToken);
+    window.localStorage.setItem('acc', store.getState().userToken.accessToken);
         });
+
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
-          params: { authorId, genreId, searchQuery },
+          params: { authorId, categoryId, searchQuery },
           headers: {
             Authorization: "Bearer " + store.getState().userToken.accessToken,
           },
@@ -70,13 +89,16 @@ export function BookListUserSide() {
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
-          params: { authorId, genreId, searchQuery },
+          params: { authorId, categoryId, searchQuery },
           headers: {
             Authorization: "Bearer " + store.getState().userToken.accessToken,
           },
         }
       );
     }
+    window.localStorage.setItem('date', store.getState().userToken.expDate);
+    window.localStorage.setItem('ref',store.getState().userToken.refreshToken);
+    window.localStorage.setItem('acc', store.getState().userToken.accessToken);
     return c.data;
   }
 
@@ -135,28 +157,65 @@ export function BookListUserSide() {
   }
 
   useEffect(() => {
-    getAllResults(authorId, categoryId, searchQuery);
-  }, [refreshToken, accessToken]);
+    if (moment(Expdate).isBefore(Date.now())) {
+      axios
+        .post("https://localhost:7190/api/Account/RefreshToken", {
+          token: `${store.getState().userToken.refreshToken}`,
+        })
+        .then((result) => {
+          dispatch(setAccessToken(result.data.accessToken));
+          dispatch(setRefreshToken(result.data.refreshToken));
+          const d = new Date();
+    d.setMinutes(d.getMinutes() +1);
+    const dd = d.toString();
+    dispatch(setExpDate(dd));
+    window.localStorage.setItem('date', store.getState().userToken.expDate);
+    window.localStorage.setItem('ref',store.getState().userToken.refreshToken);
+    window.localStorage.setItem('acc', store.getState().userToken.accessToken);
+        });
+      getAllResults("", "", "");
+    } else {
+      getAllResults("", "", "");
+    }
+  }, []);
 
   async function onClick(e) {
     SetCurrentPage(1);
-    if (e.keyPath[1] === "sub2") {
-      getAllResults("", parseInt(e.key) + 1, "");
-    } else {
-      getAllResults(parseInt(e.key) + 1, "", "");
+    let newResults;
+    if(e.keyPath[1] == "sub2")
+    {
+      newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
     }
-    await setCategoryId(parseInt(e.key) + 1);
-    await setAuthorId(parseInt(e.key) + 1);
-  }
-
-  async function deselectItem() {
-    await setCategoryId("");
-    await setAuthorId("");
-    getAllResults("", "", "");
+    else{
+      newResults = await getAllResults(parseInt(e.key) + 1, "","");
+    }
+      await dispatch(addFilteredData(newResults));
+    await SetData(store.getState().filteredData.filteredData);
   }
   
-  for (let i = 0; i < janres.length; i++) {
-    let children = [{ key: `${i}`, label: `${janres[i].name}` }];
+  async function deselectItem(e) {
+    SetCurrentPage(1);
+    let newResults;
+    if(e.keyPath[1] === "sub2")
+      {
+        newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
+        
+      }
+      else{
+        newResults = await getAllResults(parseInt(e.key) + 1, "","");
+        
+      }
+    await dispatch(removeFilteredData(newResults));
+    SetData(store.getState().filteredData.filteredData);
+    if(store.getState().filteredData.filteredData.length === 0)
+    {
+      getAllResults("", "", "");
+    }
+
+  }
+
+  for (let i = authors.length; i < janres.length + authors.length; i++) {
+    let children = [{ key: `${i}`, label: `${janres[i-authors.length].name}` }];
     menuJanres = [...menuJanres, ...children];
   }
 
@@ -288,8 +347,9 @@ export function BookListUserSide() {
           id="Menu"
           onSelect={onClick}
           onDeselect={deselectItem}
+          defaultSelectedKeys={1}
           mode="inline"
-          multiple={false}
+          multiple={true}
           items={items}
           style={{
             padding: 0,

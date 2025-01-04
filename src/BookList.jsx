@@ -14,6 +14,7 @@ import { BookData } from "./BookData";
 import axios from "axios";
 import moment from "moment";
 import { store } from "./Store";
+import { addFilteredData,removeFilteredData } from "./dataSlice";
 import { Link, useNavigate } from "react-router-dom";
 import {
   MenuFoldOutlined,
@@ -49,11 +50,18 @@ export function BookList() {
   var menuJanres = [];
   var menuAuthors = [];
 
-  const date = new Date(Date.now());
-  const Expdate = new Date(store.getState().userToken.expDate);
-
+  var Expdate;
   async function getPageOfResults(page, authorId, genreId, searchQuery) {
     var c = "";
+    if(store.getState().userToken.expDate.length < 1)
+      {
+      Expdate = new Date(window.localStorage.getItem('date'));
+      dispatch(setRefreshToken(window.localStorage.getItem('ref')));
+      dispatch(setAccessToken(window.localStorage.getItem('acc')));
+      }
+      else{
+        Expdate = new Date(store.getState().userToken.expDate);
+      }
     if (moment(Expdate).isBefore(Date.now())) {
       await axios
         .post("https://localhost:7190/api/Account/RefreshToken", {
@@ -66,6 +74,9 @@ export function BookList() {
           d.setMinutes(d.getMinutes() + 1);
           const dd = d.toString();
           dispatch(setExpDate(dd));
+          window.localStorage.setItem('date', store.getState().userToken.expDate);
+          window.localStorage.setItem('ref', store.getState().userToken.refreshToken);
+          window.localStorage.setItem('acc', store.getState().userToken.accessToken);
         });
         console.log("hi")
       c = await axios.get(
@@ -77,7 +88,6 @@ export function BookList() {
           },
         }
       );
-      console.log(c.data);
     } else {
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
@@ -89,7 +99,9 @@ export function BookList() {
         }
       );
     }
-    console.log(c.data);
+    window.localStorage.setItem('date', store.getState().userToken.expDate);
+    window.localStorage.setItem('ref', store.getState().userToken.refreshToken);
+    window.localStorage.setItem('acc', store.getState().userToken.accessToken);
     return c.data;
   }
 
@@ -154,30 +166,39 @@ export function BookList() {
   };
 
   async function onClick(e) {
-    SetCurrentPage(1);
-    if (e.keyPath[1] === "sub2") {
-      console.log("Hey");
-      await setCategoryId(parseInt(e.key) + 1);
-      const filteredDataByCategory = data.filter(
-        (book) => book.GenreId === parseInt(e.key) + 1
-      );
-      getAllResults("", parseInt(e.key) + 1, "");
-      console.log("FilteredByC: " + filteredDataByCategory);
-    } else {
-      await setAuthorId(parseInt(e.key) + 1);
-      const filteredDataByAuthor = data.filter(
-        (book) => book.AuthorId === parseInt(e.key) + 1
-      );
-      getAllResults(parseInt(e.key) + 1, "", "");
-      console.log("FilteredByA: " + filteredDataByAuthor);
+    let newResults;
+    if(e.keyPath[1] == "sub2")
+    {
+      newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
     }
+    else{
+      newResults = await getAllResults(parseInt(e.key) + 1, "","");
+    }
+      await dispatch(addFilteredData(newResults));
+    await SetData(store.getState().filteredData.filteredData);
   }
 
   async function deselectItem(e) {
-    console.log("Deselect event" + e);
-    await setCategoryId("");
-    await setAuthorId("");
-    getAllResults("", "", "");
+    let newResults;
+    console.log(store.getState().filteredData.filteredData);
+    if(e.keyPath[1] == "sub2")
+      {
+        newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
+        console.log(newResults);
+        
+      }
+      else{
+        newResults = await getAllResults(parseInt(e.key) + 1, "","");
+        console.log(newResults);
+      }
+    dispatch(removeFilteredData(newResults));
+    console.log(store.getState().filteredData.filteredData);
+    SetData(store.getState().filteredData.filteredData);
+
+    if(store.getState().filteredData.filteredData.length == 0)
+    {
+      getAllResults("", "", "");
+    }
   }
 
   useEffect(() => {
@@ -193,6 +214,9 @@ export function BookList() {
           d.setMinutes(d.getMinutes() + 1);
           const dd = d.toString();
           dispatch(setExpDate(dd));
+          window.localStorage.setItem('date', store.getState().userToken.expDate);
+          window.localStorage.setItem('ref', store.getState().userToken.refreshToken);
+          window.localStorage.setItem('acc', store.getState().userToken.accessToken);
         });
       getAllResults("", "", "");
     } else {
@@ -200,8 +224,8 @@ export function BookList() {
     }
   }, []);
 
-  for (let i = 0; i < janres.length; i++) {
-    let children = [{ key: `${i}`, label: `${janres[i].name}` }];
+  for (let i = authors.length; i < janres.length + authors.length; i++) {
+    let children = [{ key: `${i}`, label: `${janres[i-authors.length].name}` }];
     menuJanres = [...menuJanres, ...children];
   }
 
@@ -325,7 +349,8 @@ export function BookList() {
           onSelect={onClick}
           onDeselect={deselectItem}
           mode="inline"
-          multiple={false}
+          multiple={true}
+          defaultSelectedKeys={1}
           items={items}
           style={{
             padding: 0,

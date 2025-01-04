@@ -78,13 +78,12 @@ export function BookInfoUserSideWithoutPlusBtn({ book }) {
       .then(() => {
         setIsBookTaken(true); // Update the book's status as taken
         setOpen(false);
-        setConfirmLoading(false);
+        message.success(`Loan created. Return by ${selectedValue}`);
       })
       .catch((error) => {
         console.error("Failed to create loan.", error);
-        setConfirmLoading(false);
+        message.error("Book is already loan, please, choose another");
       });
-    message.success(`Loan created. Return by ${selectedValue}`);
   };
 
   useEffect(() => {

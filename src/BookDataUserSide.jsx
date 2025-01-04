@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { store } from "./Store";
+import { useParams } from "react-router-dom";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
@@ -10,6 +11,7 @@ const { Meta } = Card;
 
 export function BookDataUserSide({ book, authorName }) {
   const { token } = theme.useToken();
+  const { id } = useParams();
   const wrapperStyle = {
     width: 300,
     border: `1px solid ${token.colorBorderSecondary}`,
@@ -36,12 +38,10 @@ export function BookDataUserSide({ book, authorName }) {
 
     const data = {
       returnTime: selectedValue.format("YYYY-MM-DD"),
-      userId: parseInt(book?.userId || 0),
+      userId: id,
       bookId: book?.id,
       returnDate: selectedValue,
     };
-    setConfirmLoading(true);
-
     axios
       .post(`https://localhost:7190/api/HandOutBook`, data, {
         headers: {
@@ -51,13 +51,12 @@ export function BookDataUserSide({ book, authorName }) {
       .then(() => {
         setIsBookTaken(true); // Update the book's status as taken
         setOpen(false);
-        setConfirmLoading(false);
+        message.success(`Loan created. Return by ${selectedValue}`);
       })
       .catch((error) => {
-        console.error("Failed to create loan.", error);
-        setConfirmLoading(false);
+        message.error("Book is already loan, please, choose another");
       });
-      message.success(`Loan created. Return by ${selectedValue}`);
+      
   };
 
   const openLoanModal = () => {
