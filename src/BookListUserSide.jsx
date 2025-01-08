@@ -79,7 +79,7 @@ export function BookListUserSide() {
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
-          params: { authorId, categoryId, searchQuery },
+          params: { authorId, genreId, searchQuery },
           headers: {
             Authorization: "Bearer " + store.getState().userToken.accessToken,
           },
@@ -89,7 +89,7 @@ export function BookListUserSide() {
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
-          params: { authorId, categoryId, searchQuery },
+          params: { authorId, genreId, searchQuery },
           headers: {
             Authorization: "Bearer " + store.getState().userToken.accessToken,
           },
