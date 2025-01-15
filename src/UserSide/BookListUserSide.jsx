@@ -1,21 +1,17 @@
-import {
-  Button,
-  Layout,
-  Menu,
-  Table,
-  Col,
-  Input,
-  Row,
-  Pagination,
-  message,
-} from "antd";
+import { Button, Layout, Menu, Input, Row, Pagination } from "antd";
 import React, { useState, useEffect } from "react";
-import { BookData } from "./BookData";
+import { store } from "../ReduxStore/Store";
+import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
+import { useParams } from "react-router-dom";
+import { BookDataUserSide } from "./BookDataUserSide";
+import { addFilteredData, removeFilteredData } from "../ReduxStore/dataSlice";
 import moment from "moment";
-import { store } from "./Store";
-import { addFilteredData,removeFilteredData } from "./dataSlice";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  setAccessToken,
+  setExpDate,
+  setRefreshToken,
+} from "../ReduxStore/tokenSlice";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -23,17 +19,16 @@ import {
   AppstoreOutlined,
   ContactsOutlined,
   PoweroffOutlined,
-  PlusOutlined,
-  BookOutlined,
 } from "@ant-design/icons";
-import { useSelector, useDispatch } from "react-redux";
-import { setAccessToken, setExpDate, setRefreshToken } from "./tokenSlice";
+import { useNavigate } from "react-router-dom";
 const { Header, Sider } = Layout;
 const { Search } = Input;
-export function BookList() {
-  const accessToken = useSelector((state) => state.userToken.accessToken);
-  const refreshToken = useSelector((state) => state.userToken.refreshToken);
+
+export function BookListUserSide() {
   const dispatch = useDispatch();
+  const { id } = useParams();
+  const navigate = useNavigate();
+
   const [collapsed, setCollapsed] = useState(false);
   const [data, SetData] = useState([]);
   const [currentPage, SetCurrentPage] = useState(1);
@@ -43,26 +38,31 @@ export function BookList() {
   const currentPosts = Object.values(data).slice(firstPostIndex, lastPostIndex);
   const [janres, SetJanres] = useState([]);
   const [authors, SetAuthors] = useState([]);
-  const navigate = useNavigate();
-  const [authorId, setAuthorId] = useState([]);
-  const [categoryId, setCategoryId] = useState([]);
+  const accessToken = useSelector((state) => state.userToken.accessToken);
+  const refreshToken = useSelector((state) => state.userToken.refreshToken);
+
+  const [authorId, setAuthorId] = useState(null);
+  const [categoryId, setCategoryId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   var menuJanres = [];
   var menuAuthors = [];
 
+  const date = new Date(store.getState().userToken.expDate);
   var Expdate;
+
   async function getPageOfResults(page, authorId, genreId, searchQuery) {
     var c = "";
-    if(store.getState().userToken.expDate.length < 1)
-      {
-      Expdate = new Date(window.localStorage.getItem('date'));
-      dispatch(setRefreshToken(window.localStorage.getItem('ref')));
-      dispatch(setAccessToken(window.localStorage.getItem('acc')));
-      }
-      else{
-        Expdate = new Date(store.getState().userToken.expDate);
-      }
+    if (store.getState().userToken.expDate.length < 1) {
+      Expdate = new Date(window.localStorage.getItem("date"));
+      dispatch(setRefreshToken(window.localStorage.getItem("ref")));
+      dispatch(setAccessToken(window.localStorage.getItem("acc")));
+    } else {
+      Expdate = new Date(store.getState().userToken.expDate);
+    }
+
     if (moment(Expdate).isBefore(Date.now())) {
+      console.log("if expdate is before");
+      console.log(store.getState().userToken.refreshToken);
       await axios
         .post("https://localhost:7190/api/Account/RefreshToken", {
           token: `${store.getState().userToken.refreshToken}`,
@@ -74,11 +74,20 @@ export function BookList() {
           d.setMinutes(d.getMinutes() + 1);
           const dd = d.toString();
           dispatch(setExpDate(dd));
-          window.localStorage.setItem('date', store.getState().userToken.expDate);
-          window.localStorage.setItem('ref', store.getState().userToken.refreshToken);
-          window.localStorage.setItem('acc', store.getState().userToken.accessToken);
+          window.localStorage.setItem(
+            "date",
+            store.getState().userToken.expDate
+          );
+          window.localStorage.setItem(
+            "ref",
+            store.getState().userToken.refreshToken
+          );
+          window.localStorage.setItem(
+            "acc",
+            store.getState().userToken.accessToken
+          );
         });
-        console.log("hi")
+
       c = await axios.get(
         `https://localhost:7190/api/GetAllBooks?pageNumber=${page}&pageSize=10`,
         {
@@ -99,9 +108,9 @@ export function BookList() {
         }
       );
     }
-    window.localStorage.setItem('date', store.getState().userToken.expDate);
-    window.localStorage.setItem('ref', store.getState().userToken.refreshToken);
-    window.localStorage.setItem('acc', store.getState().userToken.accessToken);
+    window.localStorage.setItem("date", store.getState().userToken.expDate);
+    window.localStorage.setItem("ref", store.getState().userToken.refreshToken);
+    window.localStorage.setItem("acc", store.getState().userToken.accessToken);
     return c.data;
   }
 
@@ -128,6 +137,7 @@ export function BookList() {
         SetJanres(result.data);
       });
   }
+
   async function getAllResults(authorId, categoryId, searchQuery) {
     let data = [];
     let dataA = [];
@@ -157,49 +167,6 @@ export function BookList() {
     await getPageOfCategories();
     return data;
   }
-  const refreshBooks = () => {
-    getAllResults(authorId, categoryId, searchQuery);
-  };
-  const onSearch = (value) => {
-    setSearchQuery(value);
-    getAllResults(authorId, categoryId, value);
-  };
-
-  async function onClick(e) {
-    let newResults;
-    if(e.keyPath[1] == "sub2")
-    {
-      newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
-    }
-    else{
-      newResults = await getAllResults(parseInt(e.key) + 1, "","");
-    }
-      await dispatch(addFilteredData(newResults));
-    await SetData(store.getState().filteredData.filteredData);
-  }
-
-  async function deselectItem(e) {
-    let newResults;
-    console.log(store.getState().filteredData.filteredData);
-    if(e.keyPath[1] == "sub2")
-      {
-        newResults = await getAllResults("", parseInt(e.key) + 1 - authors.length,"");
-        console.log(newResults);
-        
-      }
-      else{
-        newResults = await getAllResults(parseInt(e.key) + 1, "","");
-        console.log(newResults);
-      }
-    dispatch(removeFilteredData(newResults));
-    console.log(store.getState().filteredData.filteredData);
-    SetData(store.getState().filteredData.filteredData);
-
-    if(store.getState().filteredData.filteredData.length == 0)
-    {
-      getAllResults("", "", "");
-    }
-  }
 
   useEffect(() => {
     if (moment(Expdate).isBefore(Date.now())) {
@@ -214,9 +181,18 @@ export function BookList() {
           d.setMinutes(d.getMinutes() + 1);
           const dd = d.toString();
           dispatch(setExpDate(dd));
-          window.localStorage.setItem('date', store.getState().userToken.expDate);
-          window.localStorage.setItem('ref', store.getState().userToken.refreshToken);
-          window.localStorage.setItem('acc', store.getState().userToken.accessToken);
+          window.localStorage.setItem(
+            "date",
+            store.getState().userToken.expDate
+          );
+          window.localStorage.setItem(
+            "ref",
+            store.getState().userToken.refreshToken
+          );
+          window.localStorage.setItem(
+            "acc",
+            store.getState().userToken.accessToken
+          );
         });
       getAllResults("", "", "");
     } else {
@@ -224,8 +200,45 @@ export function BookList() {
     }
   }, []);
 
+  async function onClick(e) {
+    SetCurrentPage(1);
+    let newResults;
+    if (e.keyPath[1] == "sub2") {
+      newResults = await getAllResults(
+        "",
+        parseInt(e.key) + 1 - authors.length,
+        ""
+      );
+    } else {
+      newResults = await getAllResults(parseInt(e.key) + 1, "", "");
+    }
+    await dispatch(addFilteredData(newResults));
+    await SetData(store.getState().filteredData.filteredData);
+  }
+
+  async function deselectItem(e) {
+    SetCurrentPage(1);
+    let newResults;
+    if (e.keyPath[1] === "sub2") {
+      newResults = await getAllResults(
+        "",
+        parseInt(e.key) + 1 - authors.length,
+        ""
+      );
+    } else {
+      newResults = await getAllResults(parseInt(e.key) + 1, "", "");
+    }
+    await dispatch(removeFilteredData(newResults));
+    SetData(store.getState().filteredData.filteredData);
+    if (store.getState().filteredData.filteredData.length === 0) {
+      getAllResults("", "", "");
+    }
+  }
+
   for (let i = authors.length; i < janres.length + authors.length; i++) {
-    let children = [{ key: `${i}`, label: `${janres[i-authors.length].name}` }];
+    let children = [
+      { key: `${i}`, label: `${janres[i - authors.length].name}` },
+    ];
     menuJanres = [...menuJanres, ...children];
   }
 
@@ -256,6 +269,13 @@ export function BookList() {
       children: menuJanres,
     },
   ];
+  const onSearch = (value) => {
+    setSearchQuery(value);
+    getAllResults(authorId, categoryId, value);
+  };
+  const bookLibraryOpen = () => {
+    navigate(`/userbooks/${id}`);
+  };
 
   return (
     <Layout
@@ -265,6 +285,7 @@ export function BookList() {
         flexWrap: "wrap",
         background: "white",
         overflow: "hidden",
+        height: "100vh",
       }}
     >
       <Header
@@ -286,7 +307,6 @@ export function BookList() {
             marginTop: 15,
           }}
         />
-
         <Button
           type="text"
           icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -301,6 +321,28 @@ export function BookList() {
             marginLeft: 10,
           }}
         />
+        <TableOutlined
+          onClick={bookLibraryOpen}
+          style={{
+            position: "fixed",
+            top: 0,
+            width: 64,
+            height: 64,
+            padding: 0,
+            marginLeft: 1300,
+          }}
+        ></TableOutlined>
+
+        <p
+          style={{
+            fontSize: "12px",
+            position: "fixed",
+            top: 0,
+            marginLeft: 1400,
+            marginTop: 0,
+          }}
+        ></p>
+
         <PoweroffOutlined
           style={{
             position: "fixed",
@@ -308,7 +350,7 @@ export function BookList() {
             width: 64,
             height: 64,
             padding: 0,
-            marginLeft: 1350,
+            marginLeft: 1500,
           }}
           onClick={() => {
             navigate("/");
@@ -324,40 +366,19 @@ export function BookList() {
         theme="light"
         alignItems="center"
       >
-        <div style={{ padding: "20px", textAlign: "center" }}>
-          <Button
-            type="primary"
-            style={{
-              marginRight: 10,
-              backgroundColor: "#91caff",
-              borderColor: "#91caff",
-              color: "#fff",
-            }}
-            hover={{
-              backgroundColor: "#40a9ff",
-              borderColor: "#40a9ff",
-            }}
-            icon={<PlusOutlined />}
-            onClick={() => navigate("/create")}
-          >
-            Добавить книгу
-          </Button>
-        </div>
-
         <Menu
           id="Menu"
           onSelect={onClick}
           onDeselect={deselectItem}
+          defaultSelectedKeys={1}
           mode="inline"
           multiple={true}
-          defaultSelectedKeys={1}
           items={items}
           style={{
             padding: 0,
             margin: 0,
-            height: 700,
+            height: 600,
             overflow: "auto",
-            border: 1,
           }}
         />
       </Sider>
@@ -375,19 +396,7 @@ export function BookList() {
             const authorName = book.author
               ? `${book.author.firstName} ${book.author.lastName}`
               : "Unknown Author";
-
-            return (
-              <BookData
-                key={book.id}
-                title={book.title}
-                authorName={authorName}
-                category={book.genreId}
-                id={book.id}
-                description={book.description}
-                refreshBooks={refreshBooks}
-                image={book.image}
-              />
-            );
+            return <BookDataUserSide book={book} authorName={authorName} />;
           })}
         </Row>
 
@@ -415,7 +424,7 @@ export function BookList() {
                       borderColor: "#40a9ff",
                     }}
                   >
-                    Предыдущая
+                    Previous
                   </Button>
                 );
               }
@@ -434,7 +443,7 @@ export function BookList() {
                       borderColor: "#40a9ff",
                     }}
                   >
-                    Следующая
+                    Next
                   </Button>
                 );
               }

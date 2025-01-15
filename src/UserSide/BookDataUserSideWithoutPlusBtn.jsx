@@ -2,7 +2,7 @@ import { Layout, Card, Modal, Image, Calendar, theme, Tooltip, message } from "a
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { store } from "./Store";
+import { store } from "../ReduxStore/Store";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 

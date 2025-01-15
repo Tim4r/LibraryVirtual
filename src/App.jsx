@@ -2,16 +2,16 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
 import "./global.css";
 import React from "react";
-import { BookList } from "./BookList";
-import { BookInfo } from "./BookInfo";
+import { BookList } from "./AdminSide/BookList";
+import { BookInfo } from "./AdminSide/BookInfo";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import BookInfoForEdit from "./BookInfoForEdit";
-import { BookListUserSide } from "./BookListUserSide";
-import { BookListUser } from "./BookListUser";
-import { Login } from "./Login";
-import { Registration } from "./Registration";
-import { BookInfoUserSide } from "./BookInfoUserSide";
-import { BookInfoUserSideWithoutPlusBtn } from "./BookInfoUserSideWithoutPlusBtn";
+import BookInfoForEdit from "./AdminSide/BookInfoForEdit";
+import { BookListUserSide } from "./UserSide/BookListUserSide";
+import { BookListUser } from "./UserSide/BookListUser";
+import { Login } from "./LogIn/Login";
+import { Registration } from "./LogIn/Registration";
+import { BookInfoUserSide } from "./UserSide/BookInfoUserSide";
+import { BookInfoUserSideWithoutPlusBtn } from "./UserSide/BookInfoUserSideWithoutPlusBtn";
 
 function App() {
   return (

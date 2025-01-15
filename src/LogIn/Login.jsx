@@ -4,8 +4,7 @@ import { useEffect, useState} from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { useSelector,useDispatch } from 'react-redux';
-import { store } from './Store';
-import { setRefreshToken,setAccessToken,setExpDate } from './tokenSlice';
+import { setRefreshToken,setAccessToken,setExpDate } from '../ReduxStore/tokenSlice';
 import axios from 'axios';
 export function Login (){
     const navigate=useNavigate();

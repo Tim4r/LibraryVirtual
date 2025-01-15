@@ -2,7 +2,7 @@ import { Layout } from "antd";
 import { Card, Modal, Image } from "antd";
 import React, { useState } from "react";
 import axios from "axios";
-import { store } from "./Store";
+import { store } from "../ReduxStore/Store";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
